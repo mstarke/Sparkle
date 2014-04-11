@@ -15,13 +15,13 @@
 #import "SUConstants.h"
 #import "SULog.h"
 
-#import <CoreServices/CoreServices.h>
-#import <Security/Security.h>
-#import <sys/stat.h>
-#import <sys/wait.h>
-#import <dirent.h>
-#import <unistd.h>
-#import <sys/param.h>
+#include <CoreServices/CoreServices.h>
+#include <Security/Security.h>
+#include <sys/stat.h>
+#include <sys/wait.h>
+#include <dirent.h>
+#include <unistd.h>
+#include <sys/param.h>
 
 
 @interface SUPlainInstaller (MMExtendedAttributes)
@@ -80,9 +80,7 @@ static BOOL AuthorizationExecuteWithPrivilegesAndWait(AuthorizationRef authoriza
 	NSString *version;
 	if ((version = [[NSBundle bundleWithPath:path] objectForInfoDictionaryKey:@"CFBundleVersion"]) && ![version isEqualToString:@""])
 	{
-		// We'll clean it up a little for safety.
-		// The cast is necessary because of a bug in the headers in pre-10.5 SDKs
-		NSMutableCharacterSet *validCharacters = (id)[NSMutableCharacterSet alphanumericCharacterSet];
+		NSMutableCharacterSet *validCharacters = [NSMutableCharacterSet alphanumericCharacterSet];
 		[validCharacters formUnionWithCharacterSet:[NSCharacterSet characterSetWithCharactersInString:@".-()"]];
 		postFix = [version stringByTrimmingCharactersInSet:[validCharacters invertedSet]];
 	}
@@ -134,9 +132,7 @@ static BOOL AuthorizationExecuteWithPrivilegesAndWait(AuthorizationRef authoriza
 	NSString *version = nil;
 	if ((version = [[NSBundle bundleWithPath: path] objectForInfoDictionaryKey:@"CFBundleVersion"]) && ![version isEqualToString:@""])
 	{
-		// We'll clean it up a little for safety.
-		// The cast is necessary because of a bug in the headers in pre-10.5 SDKs
-		NSMutableCharacterSet *validCharacters = (id)[NSMutableCharacterSet alphanumericCharacterSet];
+		NSMutableCharacterSet *validCharacters = [NSMutableCharacterSet alphanumericCharacterSet];
 		[validCharacters formUnionWithCharacterSet:[NSCharacterSet characterSetWithCharactersInString:@".-()"]];
 		postFix = [version stringByTrimmingCharactersInSet:[validCharacters invertedSet]];
 	}
@@ -518,9 +514,9 @@ static BOOL AuthorizationExecuteWithPrivilegesAndWait(AuthorizationRef authoriza
 
 @end
 
-#import <dlfcn.h>
-#import <errno.h>
-#import <sys/xattr.h>
+#include <dlfcn.h>
+#include <errno.h>
+#include <sys/xattr.h>
 
 @implementation SUPlainInstaller (MMExtendedAttributes)
 
@@ -530,19 +526,6 @@ static BOOL AuthorizationExecuteWithPrivilegesAndWait(AuthorizationRef authoriza
 {
 	// *** MUST BE SAFE TO CALL ON NON-MAIN THREAD!
 
-	typedef int (*removexattr_type)(const char*, const char*, int);
-	// Reference removexattr directly, it's in the SDK.
-	static removexattr_type removexattr_func = removexattr;
-	
-	// Make sure that the symbol is present.  This checks the deployment
-	// target instead of the SDK so that it's able to catch dlsym failures
-	// as well as the null symbol that would result from building with the
-	// 10.4 SDK and a lower deployment target, and running on 10.3.
-	if (!removexattr_func) {
-		errno = ENOSYS;
-		return -1;
-	}
-	
 	const char* path = NULL;
 	@try {
 		path = [file fileSystemRepresentation];
@@ -556,7 +539,7 @@ static BOOL AuthorizationExecuteWithPrivilegesAndWait(AuthorizationRef authoriza
 		return -1;
 	}
 	
-	return removexattr_func(path, name, options);
+	return removexattr(path, name, options);
 }
 
 + (void)releaseFromQuarantine:(NSString*)root
